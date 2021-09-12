@@ -5,6 +5,9 @@ struct rundata {
       char ** argv;
       SDL_Rect canv;
       int close_requested;
+      SDL_Texture * layer[8];
+      int last_mouse_x;
+      int last_mouse_y;
 };
 
 struct program {
