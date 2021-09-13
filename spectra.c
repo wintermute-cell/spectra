@@ -6,10 +6,19 @@
 #include <spectra.h>
 
 #define NAME ("spectra")
-#define DEFAULT_WINHEIGHT (480);
-#define DEFAULT_WINWIDTH (640);
+#define DEFAULT_WINHEIGHT (480)
+#define DEFAULT_WINWIDTH (640)
+#define MENB_HEIGHT (24)
 
+// define theme
 SDL_Color menubar_color = {255, 255, 255, 255};
+
+// define color palette
+SDL_Color color_red = {216, 39, 53, 255};
+SDL_Color color_yellow = {255, 161, 53, 255};
+SDL_Color color_green = {0, 158, 71, 255};
+SDL_Color color_blue = {0, 121, 231, 255};
+SDL_Color color_purple = {125, 60, 181, 255};
 
 
 int main(int argc, char **argv){
@@ -33,7 +42,6 @@ int main(int argc, char **argv){
             // program tick
             if(!prgloop_tick(&prg)) break;
 
-
             // run at 144 fps
             SDL_Delay(1000/240);
       }
@@ -50,6 +58,7 @@ int prgloop_start(struct program * prg){
 
       // start on layer 1
       prg->rundata.curr_layer = 0;
+      prg->rundata.curr_color = 1;
 
       // init canvas dimensions
       prg->rundata.canv.x = 0;
@@ -60,17 +69,25 @@ int prgloop_start(struct program * prg){
       // init menubar dimensions
       prg->rundata.menb.x = 0;
       prg->rundata.menb.y = 0;
-      prg->rundata.menb.h = 24;
+      prg->rundata.menb.h = MENB_HEIGHT;
       prg->rundata.menb.w = prg->rundata.WINWIDTH;
 
       // init menubar layer number dimensions
-      prg->rundata.menb_num.x = prg->rundata.WINWIDTH-46;
+      prg->rundata.menb_num.x = prg->rundata.WINWIDTH-50;
       prg->rundata.menb_num.y = 2;
-      prg->rundata.menb_num.h = 20;
+      prg->rundata.menb_num.h = MENB_HEIGHT-4;
       prg->rundata.menb_num.w = 46;
 
-      // create canvas textures
+      // init color palette rects
       int i;
+      for(i = 0; i < 5; i++){
+            prg->rundata.menb_color[i].x = prg->rundata.WINWIDTH-50-(24 * (i+1));
+            prg->rundata.menb_color[i].y = 2;
+            prg->rundata.menb_color[i].h = MENB_HEIGHT-4;
+            prg->rundata.menb_color[i].w = 20;
+      }
+
+      // create canvas textures
       for(i = 0; i < 8; i++){
             SDL_Texture * lr = SDL_CreateTexture(prg->renderer,
                         SDL_PIXELFORMAT_RGBA8888,
@@ -164,35 +181,49 @@ int prgloop_tick(struct program * prg){
 
       // & resolves to the bitmap that corresponds to the left mousebutton being pressed
       if(buttons & SDL_BUTTON(SDL_BUTTON_LEFT)){
+            // for persistance, this draws to a layer texture instead of the backbuffer
             SDL_SetRenderTarget(prg->renderer,
                         prg->rundata.layer[prg->rundata.curr_layer]);
-            SDL_SetRenderDrawColor(prg->renderer, 255, 45, 45, 255);
+            // look if cursor is on the menubar and change color if necessary
+            try_set_color(prg, mouse_x, mouse_y); // change current color index
+            set_color_by(prg, prg->rundata.curr_color); // set the color to index
+            // draw the cursor movements between this frame and the last
             SDL_RenderDrawLine(prg->renderer,
                         prg->rundata.last_mouse_x,
                         prg->rundata.last_mouse_y,
                         mouse_x,
                         mouse_y);
+            // unbind the render target
             SDL_SetRenderTarget(prg->renderer, NULL);
       }
+
+      // draw all textures to the renderbuffer, from layer 1 to 8, using transparency
       SDL_SetRenderDrawBlendMode(prg->renderer, SDL_BLENDMODE_BLEND);
       int i;
       for(i = 0; i < 8; i++){
             SDL_RenderCopy(prg->renderer, prg->rundata.layer[i], NULL, NULL);
       }
 
-
       // render menubar (above everything else)
       // TODO: when saving, dont draw this, to prevent it from getting saved to the img.
-      SDL_SetRenderDrawColor(prg->renderer,
+      if(1){
+            SDL_SetRenderDrawColor(prg->renderer,
                   menubar_color.r,
                   menubar_color.g,
                   menubar_color.b,
                   menubar_color.a);
-      SDL_RenderFillRect(prg->renderer, &(prg->rundata.menb));
-      SDL_RenderCopy(prg->renderer,
+            SDL_RenderFillRect(prg->renderer, &(prg->rundata.menb));
+            SDL_RenderCopy(prg->renderer,
                   prg->rundata.numfont[prg->rundata.curr_layer],
                   NULL,
                   &(prg->rundata.menb_num));
+
+            // draw color palette
+            for(i = 0; i < 5; i++){
+                  set_color_by(prg, i+1); // colors start counting with 1
+                  SDL_RenderFillRect(prg->renderer, &(prg->rundata.menb_color[i]));
+            }
+      }
 
       // switch backbuffer to screen
       SDL_RenderPresent(prg->renderer);
@@ -201,8 +232,7 @@ int prgloop_tick(struct program * prg){
       prg->rundata.last_mouse_x = mouse_x;
       prg->rundata.last_mouse_y = mouse_y;
 
-
-      //TODO: implement colors, line thickness and loading/saving from/to file.
+      //TODO: implement eraser, line thickness and loading/saving from/to file.
 }
 
 int parseargs(struct program * prg){
@@ -273,6 +303,69 @@ int program_init(struct program * prg){
             return 1;
       }
       return 0;
+}
+
+void set_color_by(struct program * prg, int index){
+            switch(index){
+                  case 1:
+                        SDL_SetRenderDrawColor(prg->renderer,
+                                    color_red.r,
+                                    color_red.g,
+                                    color_red.b,
+                                    color_red.a);
+                        break;
+                  case 2:
+                        SDL_SetRenderDrawColor(prg->renderer,
+                                    color_yellow.r,
+                                    color_yellow.g,
+                                    color_yellow.b,
+                                    color_yellow.a);
+                        break;
+                  case 3:
+                        SDL_SetRenderDrawColor(prg->renderer,
+                                    color_green.r,
+                                    color_green.g,
+                                    color_green.b,
+                                    color_green.a);
+                        break;
+                  case 4:
+                        SDL_SetRenderDrawColor(prg->renderer,
+                                    color_blue.r,
+                                    color_blue.g,
+                                    color_blue.b,
+                                    color_blue.a);
+                        break;
+                  case 5:
+                        SDL_SetRenderDrawColor(prg->renderer,
+                                    color_purple.r,
+                                    color_purple.g,
+                                    color_purple.b,
+                                    color_purple.a);
+                        break;
+                  default:
+                        printf("Unknown index given while trying to switch color!\n");
+                        break;
+            }
+
+            return;
+}
+
+int try_set_color(struct program * prg, int mouse_x, int mouse_y){
+      if(mouse_y <= MENB_HEIGHT){ // only try when mouse is on menubar
+            int i;
+            for(i = 0; i < 6; i++){
+                  if((mouse_x > prg->rundata.menb_color[i].x)
+                              && (mouse_x < prg->rundata.menb_color[i].x+20)){
+                        break;
+                  }
+            }
+            if(i == 6) return 1; // no match was found
+            else {
+                  prg->rundata.curr_color = i+1;
+                  return 0;
+            }
+      }
+      return 1;
 }
 
 int program_quit(struct program * prg){
