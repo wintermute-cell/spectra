@@ -4,10 +4,14 @@ struct rundata {
       char argc;
       char ** argv;
       SDL_Rect canv;
+      SDL_Rect menb;
+      SDL_Rect menb_num;
       int close_requested;
       SDL_Texture * layer[8];
       int last_mouse_x;
       int last_mouse_y;
+      SDL_Texture * numfont[8];
+      int curr_layer;
 };
 
 struct program {
