@@ -28,10 +28,18 @@ int main(int argc, char **argv){
       // parsing args
       prg.rundata.argc = argc;
       prg.rundata.argv = argv;
-      if(parseargs(&prg)) return 1;
+      if(parseargs(&prg)) {
+            printf("error parsing args\n");
+            printf("use -h for help\n");
+            return 1;
+      }
+
+      printf("%s\n", "Args parsed...");
 
       // initializing program
       if(program_init(&prg)) return 1;
+
+      printf("%s\n", "Program initialized...");
 
       // main loop
       prgloop_start(&prg);
@@ -40,7 +48,8 @@ int main(int argc, char **argv){
       while(!prg.rundata.close_requested){
 
             // program tick
-            if(!prgloop_tick(&prg)) break;
+            //if(!prgloop_tick(&prg)) break;
+            prgloop_tick(&prg);
 
             // run at 144 fps
             SDL_Delay(1000/240);
